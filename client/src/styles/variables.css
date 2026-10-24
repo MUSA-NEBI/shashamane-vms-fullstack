@@ -1,0 +1,66 @@
+/* ============================================================
+   Design Tokens — consistent colors, spacing, typography
+   ============================================================ */
+
+:root {
+  /* Brand Colors */
+  --color-primary:        #1e3a5f;   /* Deep navy blue */
+  --color-primary-light:  #2d5986;
+  --color-primary-dark:   #142840;
+  --color-accent:         #f0a500;   /* Ethiopian gold */
+  --color-accent-light:   #f5bc3d;
+  --color-accent-dark:    #c88200;
+
+  /* Status Colors */
+  --color-success:        #198754;
+  --color-success-light:  #d1e7dd;
+  --color-warning:        #ffc107;
+  --color-warning-light:  #fff3cd;
+  --color-danger:         #dc3545;
+  --color-danger-light:   #f8d7da;
+  --color-info:           #0dcaf0;
+  --color-info-light:     #cff4fc;
+
+  /* Neutrals */
+  --color-white:          #ffffff;
+  --color-gray-50:        #f8f9fa;
+  --color-gray-100:       #e9ecef;
+  --color-gray-200:       #dee2e6;
+  --color-gray-300:       #ced4da;
+  --color-gray-400:       #adb5bd;
+  --color-gray-500:       #6c757d;
+  --color-gray-600:       #495057;
+  --color-gray-700:       #343a40;
+  --color-gray-800:       #212529;
+  --color-gray-900:       #111827;
+
+  /* Layout */
+  --sidebar-width:        260px;
+  --sidebar-collapsed:    70px;
+  --topbar-height:        64px;
+  --border-radius-sm:     4px;
+  --border-radius:        8px;
+  --border-radius-lg:     12px;
+  --border-radius-xl:     20px;
+
+  /* Shadows */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08);
+  --shadow:     0 2px 8px rgba(0,0,0,0.12);
+  --shadow-lg:  0 8px 24px rgba(0,0,0,0.14);
+  --shadow-xl:  0 20px 40px rgba(0,0,0,0.18);
+
+  /* Typography */
+  --font-family:      'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-size-xs:     0.75rem;
+  --font-size-sm:     0.875rem;
+  --font-size-base:   1rem;
+  --font-size-lg:     1.125rem;
+  --font-size-xl:     1.25rem;
+  --font-size-2xl:    1.5rem;
+  --font-size-3xl:    1.875rem;
+  --font-size-4xl:    2.25rem;
+
+  /* Transitions */
+  --transition:       all 0.2s ease;
+  --transition-slow:  all 0.3s ease;
+}
