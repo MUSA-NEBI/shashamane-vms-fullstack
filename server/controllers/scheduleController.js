@@ -349,9 +349,78 @@ const generateFromTemplate = async (req, res, next) => {
   }
 };
 
+// GET /api/schedules/available-dates — get dates with available schedules for origin/destination
+const getAvailableDates = async (req, res, next) => {
+  try {
+    const { origin, destination } = req.query;
+
+    if (!origin || !destination) {
+      throw new AppError('Origin and destination are required.', 400);
+    }
+
+    // Find routes matching origin/destination
+    const Route = require('../models/Route');
+    const routes = await Route.find({
+      origin: { $regex: origin, $options: 'i' },
+      destination: { $regex: destination, $options: 'i' },
+      isActive: true,
+    }).select('_id');
+
+    const routeIds = routes.map((r) => r._id);
+
+    if (routeIds.length === 0) {
+      return sendSuccess(res, { data: [] });
+    }
+
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    // Find all schedules for these routes in the future
+    const schedules = await Schedule.find({
+      route: { $in: routeIds },
+      departureTime: { $gte: now },
+      status: { $in: [SCHEDULE_STATUS.SCHEDULED, SCHEDULE_STATUS.BOARDING] },
+    })
+    .populate('vehicle', 'capacity')
+    .select('departureTime bookedSeats vehicle')
+    .sort({ departureTime: 1 })
+    .limit(365); // Max 1 year ahead
+
+    // Group by date and check if any schedule has available seats
+    const dateMap = {};
+    schedules.forEach((schedule) => {
+      const dateKey = schedule.departureTime.toISOString().split('T')[0];
+      const availableSeats = schedule.vehicle ? schedule.vehicle.capacity - schedule.bookedSeats.length : 0;
+      
+      if (!dateMap[dateKey]) {
+        dateMap[dateKey] = {
+          date: dateKey,
+          hasAvailability: availableSeats > 0,
+          scheduleCount: 1,
+        };
+      } else {
+        dateMap[dateKey].scheduleCount++;
+        if (availableSeats > 0) {
+          dateMap[dateKey].hasAvailability = true;
+        }
+      }
+    });
+
+    // Return only dates with availability
+    const availableDates = Object.values(dateMap)
+      .filter(d => d.hasAvailability)
+      .map(d => d.date);
+
+    return sendSuccess(res, { data: availableDates });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getSchedules,
   searchSchedules,
+  getAvailableDates,
   getSchedule,
   createSchedule,
   updateSchedule,

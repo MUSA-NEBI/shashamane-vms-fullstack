@@ -4,7 +4,7 @@ const { protect, authorize } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const { createScheduleValidator, updateScheduleValidator } = require('../validators/scheduleValidators');
 const {
-  getSchedules, searchSchedules, getSchedule,
+  getSchedules, searchSchedules, getAvailableDates, getSchedule,
   createSchedule, updateSchedule, deleteSchedule,
   getSeatMap, generateFromTemplate,
 } = require('../controllers/scheduleController');
@@ -14,6 +14,7 @@ const {
 
 // ── Public routes (no auth) ───────────────────────────────────────────────
 router.get('/search',          searchSchedules);
+router.get('/available-dates', getAvailableDates);
 router.get('/:id/seats',       getSeatMap);
 
 // ── Template routes (auth required) ──────────────────────────────────────

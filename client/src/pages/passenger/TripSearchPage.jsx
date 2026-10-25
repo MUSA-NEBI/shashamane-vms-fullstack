@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { scheduleAPI } from '../../services/scheduleService';
 import { routeAPI } from '../../services/routeService';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -9,13 +12,14 @@ import { formatDateTime, formatDuration, formatCurrency } from '../../utils/form
 const TripSearchPage = () => {
   const [urlParams]  = useSearchParams();
   const navigate     = useNavigate();
+  const datePickerRef = React.useRef(null);
 
   const today = new Date().toISOString().split('T')[0];
 
   const [form, setForm]     = useState({
     origin:      urlParams.get('origin')      || '',
     destination: urlParams.get('destination') || '',
-    date:        urlParams.get('date')        || today,
+    date:        urlParams.get('date')        ? new Date(urlParams.get('date')) : new Date(),
     seats:       1,
   });
   const [results,  setResults]  = useState(null);
@@ -23,6 +27,8 @@ const TripSearchPage = () => {
   const [error,    setError]    = useState(null);
   const [origins,  setOrigins]  = useState([]);
   const [searched, setSearched] = useState(false);
+  const [availableDates, setAvailableDates] = useState([]);
+  const [loadingDates, setLoadingDates] = useState(false);
 
   // Load origin suggestions
   useEffect(() => {
@@ -34,12 +40,51 @@ const TripSearchPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fetch available dates when origin and destination are selected
+  useEffect(() => {
+    if (form.origin && form.destination) {
+      setLoadingDates(true);
+      scheduleAPI.getAvailableDates({ origin: form.origin, destination: form.destination })
+        .then((res) => {
+          const dates = res.data.data || [];
+          setAvailableDates(dates);
+          console.log('Available dates loaded:', dates);
+        })
+        .catch(() => {
+          setAvailableDates([]);
+        })
+        .finally(() => {
+          setLoadingDates(false);
+        });
+    } else {
+      setAvailableDates([]);
+    }
+  }, [form.origin, form.destination]);
+
   const handleSearch = async (e, overrideForm) => {
     if (e) e.preventDefault();
     const q = overrideForm || form;
+    
+    // Convert date to YYYY-MM-DD format for API
+    let dateStr;
+    if (q.date instanceof Date) {
+      // Format the date properly in local timezone
+      const year = q.date.getFullYear();
+      const month = String(q.date.getMonth() + 1).padStart(2, '0');
+      const day = String(q.date.getDate()).padStart(2, '0');
+      dateStr = `${year}-${month}-${day}`;
+    } else {
+      dateStr = q.date;
+    }
+    
     setLoading(true); setError(null); setSearched(true);
     try {
-      const res = await scheduleAPI.search({ origin: q.origin, destination: q.destination, date: q.date, seats: q.seats });
+      const res = await scheduleAPI.search({ 
+        origin: q.origin, 
+        destination: q.destination, 
+        date: dateStr, 
+        seats: q.seats 
+      });
       setResults(res.data.data || []);
     } catch (err) {
       setError(err.message);
@@ -49,6 +94,20 @@ const TripSearchPage = () => {
   };
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  // Check if a date is available for selection
+  const isDateAvailable = (date) => {
+    if (!form.origin || !form.destination) return true; // Allow all dates if route not selected
+    if (availableDates.length === 0) return false; // Block all if no dates available
+    
+    // Format the date in local timezone to match available dates format (YYYY-MM-DD)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    return availableDates.includes(dateStr);
+  };
 
   return (
     <div>
@@ -83,9 +142,52 @@ const TripSearchPage = () => {
               </div>
             </div>
             <div className="col-md-2">
-              <label className="form-label">Date</label>
-              <input type="date" className="form-control" value={form.date} min={today}
-                onChange={(e) => set('date', e.target.value)} required />
+              <label className="form-label">
+                Date
+                {loadingDates && <span className="spinner-border spinner-border-sm ms-2" style={{width: '0.8rem', height: '0.8rem'}} />}
+              </label>
+              <div className="position-relative">
+                <DatePicker
+                  ref={datePickerRef}
+                  selected={form.date}
+                  onChange={(date) => {
+                    console.log('Date selected:', date);
+                    set('date', date);
+                  }}
+                  dateFormat="yyyy-MM-dd"
+                  minDate={new Date()}
+                  filterDate={isDateAvailable}
+                  disabled={loadingDates || (!form.origin || !form.destination)}
+                  placeholderText="Select date"
+                  className="form-control"
+                  required
+                  calendarStartDay={0}
+                  showPopperArrow={false}
+                  autoComplete="off"
+                />
+                <i 
+                  className="bi bi-calendar3 position-absolute text-success"
+                  style={{
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    cursor: loadingDates || (!form.origin || !form.destination) ? 'not-allowed' : 'pointer',
+                    fontSize: '1.1rem',
+                    pointerEvents: 'auto'
+                  }}
+                  onClick={() => {
+                    if (!loadingDates && form.origin && form.destination && datePickerRef.current) {
+                      datePickerRef.current.setOpen(true);
+                    }
+                  }}
+                />
+              </div>
+              {form.origin && form.destination && !loadingDates && availableDates.length === 0 && (
+                <small className="text-danger d-block mt-1">
+                  <i className="bi bi-exclamation-circle me-1" />
+                  No trips for this route
+                </small>
+              )}
             </div>
             <div className="col-md-2">
               <label className="form-label">Seats</label>
@@ -114,7 +216,11 @@ const TripSearchPage = () => {
           <EmptyState
             icon="bi-bus-front"
             title="No trips found"
-            subtitle={`No available trips from ${form.origin} to ${form.destination} on ${form.date} with ${form.seats} seat(s).`}
+            subtitle={`No available trips from ${form.origin} to ${form.destination} on ${
+              form.date instanceof Date 
+                ? form.date.toLocaleDateString('en-ET', { year: 'numeric', month: 'short', day: 'numeric' })
+                : form.date
+            } with ${form.seats} seat(s).`}
           />
         ) : (
           <div>
