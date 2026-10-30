@@ -1,3 +1,4 @@
+
 /**
  * authService.js
  * Core authentication business logic.
@@ -57,8 +58,9 @@ const signToken = (user) => {
 };
 
 /**
- * Set JWT as an httpOnly, Secure (in production) cookie on the response.
- * httpOnly prevents JavaScript from reading the token — mitigates XSS theft.
+ * Set JWT as an httpOnly, Secure cookie.
+ * SameSite=None allows cross-site requests between the
+ * separate Vercel frontend and backend deployments.
  */
 const sendTokenCookie = (res, token) => {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -66,19 +68,26 @@ const sendTokenCookie = (res, token) => {
 
   res.cookie('token', token, {
     httpOnly: true,
-    secure: isProduction,       // Only sent over HTTPS in production
-    sameSite: isProduction ? 'strict' : 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge,
+    path: '/',
   });
 };
 
 /**
- * Clear the auth cookie (logout).
+ * Clear the authentication cookie (logout).
+ * Cookie options must match the settings used when creating it.
  */
 const clearTokenCookie = (res) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   res.cookie('token', '', {
     httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     expires: new Date(0),
+    path: '/',
   });
 };
 
